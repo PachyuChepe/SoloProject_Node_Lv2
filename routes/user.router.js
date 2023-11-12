@@ -4,11 +4,10 @@ const { User } = require("../sequelize/models/index.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env.config.js");
-const verifyLoggedInMiddleware = require("../middleware/verifyLoggedIn.middleware.js");
-const verifyNotLoggedInMiddleware = require("../middleware/verifyNotLoggedIn.middleware.js");
+const { isLoggedIn, isNotLoggedIn } = require("../middleware/verifyToken.middleware.js");
 
 // 회원가입
-router.post("/signup", verifyNotLoggedInMiddleware, async (req, res) => {
+router.post("/signup", isNotLoggedIn, async (req, res) => {
   const { email, password, confirmPassword, name } = req.body;
   try {
     // 필수 입력 값 검증
@@ -23,8 +22,8 @@ router.post("/signup", verifyNotLoggedInMiddleware, async (req, res) => {
     }
 
     // 비밀번호 강도 검증
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*]/.test(password)) {
-      return res.status(400).json({ message: "비밀번호는 최소 8자 이상이며, 대소문자, 숫자, 하나 이상의 특수문자를 포함 해야합니다." });
+    if (password.length < 6 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*]/.test(password)) {
+      return res.status(400).json({ message: "비밀번호는 최소 6자 이상이며, 대소문자, 숫자, 하나 이상의 특수문자를 포함 해야합니다." });
     }
 
     // 비밀번호 일치 검증
@@ -50,7 +49,7 @@ router.post("/signup", verifyNotLoggedInMiddleware, async (req, res) => {
 });
 
 // 로그인
-router.post("/login", verifyNotLoggedInMiddleware, async (req, res) => {
+router.post("/login", isNotLoggedIn, async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ where: { email } });
@@ -74,7 +73,7 @@ router.post("/login", verifyNotLoggedInMiddleware, async (req, res) => {
 });
 
 // 사용자 조회
-router.get("/user", verifyLoggedInMiddleware, async (req, res) => {
+router.get("/user", isLoggedIn, async (req, res) => {
   try {
     // 인증 미들웨어를 통해 얻은 사용자 정보를 추출
     const { email, name } = res.locals.user;
@@ -95,7 +94,7 @@ router.get("/user", verifyLoggedInMiddleware, async (req, res) => {
 });
 
 // 회원 정보 수정
-router.put("/user", verifyLoggedInMiddleware, async (req, res) => {
+router.put("/user", isLoggedIn, async (req, res) => {
   const { id } = res.locals.user;
   const { currentPassword, newPassword, name } = req.body;
   try {
@@ -110,8 +109,8 @@ router.put("/user", verifyLoggedInMiddleware, async (req, res) => {
       return res.status(401).json({ message: "현재 비밀번호가 일치하지 않습니다." });
     }
 
-    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*]/.test(newPassword)) {
-      return res.status(400).json({ message: "비밀번호는 최소 8자 이상이며, 대소문자, 숫자, 하나 이상의 특수문자를 포함해야 합니다." });
+    if (newPassword.length < 6 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*]/.test(newPassword)) {
+      return res.status(400).json({ message: "비밀번호는 최소 6자 이상이며, 대소문자, 숫자, 하나 이상의 특수문자를 포함해야 합니다." });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -124,7 +123,7 @@ router.put("/user", verifyLoggedInMiddleware, async (req, res) => {
 });
 
 // 회원 탈퇴
-router.delete("/user", verifyLoggedInMiddleware, async (req, res) => {
+router.delete("/user", isLoggedIn, async (req, res) => {
   const { id } = res.locals.user;
   try {
     const user = await User.findByPk(id);
@@ -141,7 +140,7 @@ router.delete("/user", verifyLoggedInMiddleware, async (req, res) => {
 });
 
 // 로그아웃
-router.post("/logout", verifyLoggedInMiddleware, (req, res) => {
+router.post("/logout", isLoggedIn, (req, res) => {
   res.clearCookie("Authorization");
   res.status(200).json({ message: "로그아웃 성공" });
 });
